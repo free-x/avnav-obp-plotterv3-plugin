@@ -1,0 +1,12 @@
+.obpPlotter .row {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 0.5em;
+    font-size: 2em;
+}
+.obpPlotter button{
+    font-size: 1em;
+    width: 1.3em;
+    height: 1.3em;
+}

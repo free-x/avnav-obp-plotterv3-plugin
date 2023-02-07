@@ -6,6 +6,8 @@ plugin for AvNav
 import time
 import os
 import threading
+import sys
+sys.path.insert(0,'')
 import pwm
 hasPackages=True
 try:
@@ -116,6 +118,7 @@ class Plugin(object):
     seq=0
     if not hasPackages:
       raise Exception("missing packages for remote control")
+    self.api.registerRequestHandler(self.handleApiRequest)
     self.api.setStatus('NMEA','running')
     i2c = smbus.SMBus(1)
     currentMode=gpio.getmode()
@@ -123,8 +126,7 @@ class Plugin(object):
       gpio.setmode(gpio.BOARD)
     self.api.log("gpio mode=%d",gpio.getmode())
     self.prepare()
-    duty=self.updateIndex()
-    self.pwm.update(duty)
+    self.update()
     while not self.api.shouldStopMainThread():
       try:
         if address is not None:
