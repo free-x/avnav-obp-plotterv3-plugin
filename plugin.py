@@ -7,7 +7,8 @@ import time
 import os
 import threading
 import sys
-sys.path.insert(0,'')
+dn=os.path.dirname(__file__)
+sys.path.append(dn)
 import pwm
 hasPackages=True
 try:
