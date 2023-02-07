@@ -1,0 +1,23 @@
+# nfpm example config file
+#
+# check https://nfpm.goreleaser.com/configuration for detailed usage
+#
+name: "avnav-obp-rc-remote-plugin"
+arch: "all"
+platform: "linux"
+version: "v1.0.0"
+keep_version: true
+section: "default"
+priority: "extra"
+depends:
+- avnav
+- python3-smbus
+- python3-rpi.gpio
+maintainer: "Andreas Vogel <andreas@wellenvogel.de>"
+description: |
+  AvNav plugin to interwork with remote https://www.segeln-forum.de/board194-boot-technik/board195-open-boat-projects-org/78328-fernbedienung-f%C3%BCr-den-raspberry/
+homepage: "https://example.com"
+license: "MIT"
+contents:
+- src: ./plugin.*
+  dst: /usr/lib/avnav/plugins/chremote
