@@ -2,6 +2,7 @@
 import os
 import sys
 import traceback
+import time
 
 class PWMControl:
   '''
@@ -48,6 +49,7 @@ class PWMControl:
             pass
         else:
             raise
+    time.sleep(0.5)      
     if not os.path.exists(self.pwm0):
       raise Exception("cannot access hardware pwm, %s not found",self.pwm0)
     self._setParam(duty,freq)

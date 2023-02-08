@@ -98,8 +98,6 @@ class Plugin(object):
       idx=len(self.STEPS)-1
     return self.STEPS[idx]    
 
-  def prepare(self):
-    self.pwm.prepare(duty=self.updateIndex())
 
   def update(self,change=0):
     with self.lock:
@@ -133,8 +131,6 @@ class Plugin(object):
     if currentMode is None:
       gpio.setmode(gpio.BOARD)
     self.api.log("gpio mode=%d",gpio.getmode())
-    self.prepare()
-    self.update()
     while not self.api.shouldStopMainThread():
       try:
         if not self.pwm.prepared:
