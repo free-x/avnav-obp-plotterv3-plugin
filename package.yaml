@@ -23,6 +23,8 @@ contents:
   dst: /usr/lib/avnav/plugins/obp-plotterv3
 - src: ./pwm.py
   dst: /usr/lib/avnav/plugins/obp-plotterv3/pwm.py
+- src: ./setup.sh
+  dst: /usr/lib/avnav/plugins/obp-plotterv3/setup.sh  
 deb:
   fields:
     avnav-plugin: system-obp-plotterv3

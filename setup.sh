@@ -1,9 +1,10 @@
+#! /bin/bash
 #OBP plotter v3 setup script
 #run as root
 #returns 1 if reboot needed
 PATTERN="OBPPLOTTERV3_DO_NOT_DELETE"
-STARTPATTERN="${PATTERN}_START"
-ENDPATTERN="${PATTERN}_END"
+STARTPATTERN="#${PATTERN}_START"
+ENDPATTERN="#${PATTERN}_END"
 
 log(){
     echo "OBPPLOTTERV3: $*"
@@ -29,7 +30,7 @@ updateConfig(){
     cp $1 $1.save || return 1
     sed -i "/$STARTPATTERN/,/$ENDPATTERN/d" $1
     echo "$STARTPATTERN" >> $1 || return 1
-    echo "$CONFIG" >> $1 || return 1
+    echo "$CFGDATA" >> $1 || return 1
     echo "$ENDPATTERN" >> $1 || return 1
     return 0
 }
@@ -37,7 +38,7 @@ ret=0
 if grep "$PATTERN" "$CONFIG" > /dev/null ; then
   log "$CONFIG found $PATTERN, checking"
   CUR="`sed -n /$STARTPATTERN/,/$ENDPATTERN/p $CONFIG | grep -v $PATTERN`"
-  if [ "$CUR" = "$CONFIG" ] ; then
+  if [ "$CUR" = "$CFGDATA" ] ; then
     log "$CONFIG ok"
   else
     log "updating $CONFIG, reboot needed"
@@ -54,6 +55,6 @@ fi
 #modify avnav_server.xml for dim button
 #modify firefox startup
 
-
+exit $ret
 
 
