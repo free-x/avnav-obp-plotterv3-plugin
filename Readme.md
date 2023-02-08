@@ -1,4 +1,4 @@
-Plugin for a Rpi Remote
+Plugin for the OBP Plotter V3
 =======================
 This is an [avnav](https://www.wellenvogel.de/software/avnav/docs/beschreibung.html?lang=en) plugin
 to handle to support the obp plotter v3 from  [chrhartz](https://www.segeln-forum.de/user/19350-chrhartz) - see the link in the (german) 
