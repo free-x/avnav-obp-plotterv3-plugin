@@ -29,9 +29,11 @@ let widgetServer={
             .then((json)=>{
                 if (json.status !== "OK"){
                     context.duty="???"
+                    context.error=json.status||"Error"
                 }
                 else{
                     context.duty=json.duty+"";
+                    context.error=json.error;
                 }
                 context.triggerRedraw();
             })
@@ -78,15 +80,16 @@ let widgetServer={
         var buttonClass="plusminus";
         //as we are not sure if the browser supports template strings we use the AvNav helper for that...
         var replacements={
-            duty:this.duty,
-            disabled: ''
+            duty:this.error?"Error":this.duty,
+            disabled: '',
+            errorClass: this.error?"error":""
         };
         var template='<div class="widgetData">' +
             '<div class="row">'+
             '<button class="plusminus" ${disabled}  onclick="minusClick">-</button>' +
             '<button class="plusminus" ${disabled}  onclick="plusClick">+</button>' +
             '</div>'+
-            '<div class="server">${duty}</div></div>';
+            '<div class="server ${errorClass}">${duty}</div></div>';
         return avnav.api.templateReplace(template,replacements);
     },
     caption: "Brightness",

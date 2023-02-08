@@ -20,6 +20,8 @@ except:
 # brightness receiver address (i2c)
 address = None #0xnn
 
+#frequency for pwm in Hz
+frequency = 1000
 
 
 
@@ -66,7 +68,7 @@ class Plugin(object):
     self.allowRepeat=False
     self.channel=0
     self.currentStep=self.INITIAL_STEP
-    self.pwm=pwm.PWMControl()
+    self.pwm=pwm.PWMControl(frequency)
     self.brightness=0
     self.lock=threading.Lock()
     self.error=None
@@ -117,13 +119,11 @@ class Plugin(object):
     the run method
     this will be called after successfully instantiating an instance
     this method will be called in a separate Thread
-    The example simply counts the number of NMEA records that are flowing through avnav
-    and writes them to the store every 10 records
     @return:
     """
     seq=0
     if not hasPackages:
-      raise Exception("missing packages for remote control")
+      raise Exception("missing packages for i2c")
     self.api.registerRequestHandler(self.handleApiRequest)
     self.api.setStatus('NMEA','running')
     i2c = smbus.SMBus(1)

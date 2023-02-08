@@ -13,24 +13,33 @@ class PWMControl:
   refer to /boot/overlay/README for allowed combinations of pin and func
   '''
   BASE_PATH="/sys/class/pwm/pwmchip0"
-  def __init__(self) -> None:
+  def __init__(self,frequency=100) -> None:
     self.period=None
     self.duty=None
-    self.freq=100
+    self.freq=frequency
     self.pwm0=os.path.join(self.BASE_PATH,"pwm0")
-    self._setParam(50,100)
+    self._setParam(50,frequency)
     self.prepared=False
   def _setParam(self,duty,freq=None):
     if freq is not None:
       self.period=int(1000000000.0/float(freq))
     self.duty=int(duty*self.period/100)
-  def _write(self):
-    wfile=os.path.join(self.pwm0,"period")
-    with open(wfile,"w") as h:
-      h.write(str(self.period))
+    if self.duty > self.period:
+      self.duty=self.period
+  def _writeDuty(self,duty):
     wfile=os.path.join(self.pwm0,"duty_cycle")
     with open(wfile,"w") as h:
-      h.write(str(self.duty))
+      h.write(str(duty))    
+  def _write(self):
+    wfile=os.path.join(self.pwm0,"period")
+    with open(wfile,"r") as h:
+      old=h.readline()
+      if old is not None and int(old) > self.period:
+        #must reset duty
+        self._writeDuty(0)
+    with open(wfile,"w") as h:
+      h.write(str(self.period))
+    self._writeDuty(self.duty)
 
   def prepare(self,freq=100,duty=50):
     '''
