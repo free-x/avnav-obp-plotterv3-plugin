@@ -51,9 +51,16 @@ else
   ret=1
 fi
 
-#TODO:
-#modify avnav_server.xml for dim button
-#modify firefox startup
+#TODO: should we own this script? - is no official API
+HELPER=`dirname $0`/../../raspberry/xui/patchServerConfig.py
+BASEDIR=/home/pi/avnav/data
+CFG="$BASEDIR/avnav_server.xml"
+if [ -x "$HELPER" -a -w "$CFG" ] ; then
+  log "setting up dimm command for avnav"
+  $HELPER $CFG dimm '$BASEDIR/../plugins/obp-plotterv3/dimm.sh' '' || err "unable to set up dimm"
+else
+  log "unable to set up dimm $HELPER or $CFG not found"
+fi
 
 exit $ret
 
