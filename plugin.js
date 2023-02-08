@@ -78,13 +78,13 @@ let widgetServer={
         var buttonClass="plusminus";
         //as we are not sure if the browser supports template strings we use the AvNav helper for that...
         var replacements={
-            buttonClass: buttonClass,
-            duty:this.duty
+            duty:this.duty,
+            disabled: ''
         };
         var template='<div class="widgetData">' +
             '<div class="row">'+
-            '<button class="${buttonClass}" ${disabled}  onclick="minusClick">-</button>' +
-            '<button class="${buttonClass}" ${disabled}  onclick="plusClick">+</button>' +
+            '<button class="plusminus" ${disabled}  onclick="minusClick">-</button>' +
+            '<button class="plusminus" ${disabled}  onclick="plusClick">+</button>' +
             '</div>'+
             '<div class="server">${duty}</div></div>';
         return avnav.api.templateReplace(template,replacements);

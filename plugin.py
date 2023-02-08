@@ -69,6 +69,7 @@ class Plugin(object):
     self.pwm=pwm.PWMControl()
     self.brightness=0
     self.lock=threading.Lock()
+    self.error=None
 
 
   def updateParam(self,newParam):
@@ -103,8 +104,14 @@ class Plugin(object):
   def update(self,change=0):
     with self.lock:
       duty=self.updateIndex(change)
-      self.pwm.update(duty)
-      self.api.setStatus('NMEA','brightness %d, step %d, duty %d'%(self.brightness,self.currentStep,duty))
+      try:
+        self.pwm.update(duty)
+        self.api.setStatus('NMEA','brightness %d, step %d, duty %d'%(self.brightness,self.currentStep,duty))
+        self.error=None
+      except Exception as e:
+        self.api.setStatus('ERROR',str(e))  
+        self.error=str(e)
+        raise
 
 
   def run(self):
@@ -130,6 +137,11 @@ class Plugin(object):
     self.update()
     while not self.api.shouldStopMainThread():
       try:
+        if not self.pwm.prepared:
+          try:
+            self.update()
+          except:
+            pass  
         if address is not None:
           self.brightness=i2c.read_byte(address)
         time.sleep(1)
@@ -150,7 +162,7 @@ class Plugin(object):
     OK={'status':'OK'}
     try:
       if url == 'query':
-        return {'status':'OK','brightness':self.brightness,'step':self.currentStep,'duty':self.getCurrentDuty()}
+        return {'status':'OK','brightness':self.brightness,'step':self.currentStep,'duty':self.getCurrentDuty(),'error':self.error}
       if url == 'plus':
         self.update(1)
         return OK

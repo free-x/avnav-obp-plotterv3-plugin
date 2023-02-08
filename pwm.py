@@ -15,9 +15,10 @@ class PWMControl:
   def __init__(self) -> None:
     self.period=None
     self.duty=None
+    self.freq=100
     self.pwm0=os.path.join(self.BASE_PATH,"pwm0")
     self._setParam(50,100)
-    pass
+    self.prepared=False
   def _setParam(self,duty,freq=None):
     if freq is not None:
       self.period=int(1000000000.0/float(freq))
@@ -38,6 +39,7 @@ class PWMControl:
     '''
     if not os.path.exists(self.BASE_PATH):
       raise Exception("pwm not created, missing %s"%self.BASE_PATH)
+    self.freq=freq  
     try:  
         with open(os.path.join(self.BASE_PATH,"export"),"w") as h:
             h.write("0")
@@ -53,10 +55,14 @@ class PWMControl:
     wfile=os.path.join(self.pwm0,"enable")
     with open(wfile,"w") as h:
       h.write(str(1))
+    self.prepared=True  
 
   def update(self,duty):
-    self._setParam(duty)
-    self._write()
+    if not self.prepared:
+      self.prepare(freq=self.freq,duty=duty)
+    else:  
+      self._setParam(duty)
+      self._write()
     
 
 if __name__ == '__main__':
