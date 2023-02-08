@@ -51,6 +51,21 @@ else
   ret=1
 fi
 
+if [ -e $CONFIG ] && grep -q -E "^dtparam=audio=on$" $CONFIG; then
+  ret=1
+  log "need to disable default sound driver, reboot needed"
+  sed -i "s|^dtparam=audio=on$|#dtparam=audio=on|" $CONFIG &> /dev/null
+fi
+
+SOUNDCFG=/etc/asound.conf
+if [ -f "$SOUNDCFG" ] ; then
+  rm -f "$SOUNDCFG.save"
+  mv "$SOUNDCFG" "$SOUNDCFG.save"
+fi
+cp `dirname $0`/asound.conf "$SOUNDCFG" || err "unable to set up sound config"
+
+#TODO: should we enable aply to avoid noise?
+
 #TODO: should we own this script? - is no official API
 HELPER=`dirname $0`/../../raspberry/xui/patchServerConfig.py
 BASEDIR=/home/pi/avnav/data
