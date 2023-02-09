@@ -139,10 +139,12 @@ class Plugin(object):
     else:
       self.error="unable to register dimm command, avnav too old"  
     self.api.registerRequestHandler(self.handleApiRequest)
+    self.api.registerSettingsFile('localFirefox','localFirefox.json')
+    self.api.registerLayout('localFirefox','localLayout.json')
     if self.error is not None:
       self.api.setStatus('ERROR',self.error)
     else:  
-      self.api.setStatus('NMEA','running')
+      self.api.setStatus('NMEA','running')  
     i2c = smbus.SMBus(1)
     currentMode=gpio.getmode()
     if currentMode is None:

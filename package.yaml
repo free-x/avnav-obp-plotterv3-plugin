@@ -25,6 +25,8 @@ contents:
   dst: /usr/lib/avnav/plugins/obp-plotterv3/pwm.py
 - src: ./*.sh
   dst: /usr/lib/avnav/plugins/obp-plotterv3
+- src: ./*.json
+  dst: /usr/lib/avnav/plugins/obp-plotterv3  
 - src: asound.conf
   dst: /usr/lib/avnav/plugins/obp-plotterv3/asound.conf
 - src: aplay.service
