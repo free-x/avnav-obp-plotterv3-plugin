@@ -73,7 +73,6 @@ class Plugin(object):
     self.lock=threading.Lock()
     self.error=None
 
-
   def updateParam(self,newParam):
     self.api.saveConfigValues(newParam)
  
@@ -124,8 +123,15 @@ class Plugin(object):
     seq=0
     if not hasPackages:
       raise Exception("missing packages for i2c")
+    if hasattr(self.api,'registerCommand'):
+      self.api.registerCommand('dimm','dimm.sh',client='all')
+    else:
+      self.error="unable to register dimm command, avnav too old"  
     self.api.registerRequestHandler(self.handleApiRequest)
-    self.api.setStatus('NMEA','running')
+    if self.error is not None:
+      self.api.setStatus('ERROR',self.error)
+    else:  
+      self.api.setStatus('NMEA','running')
     i2c = smbus.SMBus(1)
     currentMode=gpio.getmode()
     if currentMode is None:
@@ -142,7 +148,7 @@ class Plugin(object):
           self.brightness=i2c.read_byte(address)
         time.sleep(1)
       except Exception as e:
-        self.api.setStatus("ERROR","%s"%e)
+        self.api.setStatus("ERROR","%s"%str(e))
         time.sleep(1)
 
 
