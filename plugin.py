@@ -27,7 +27,13 @@ frequency = 1000
 
 class Plugin(object):
   CONFIG=[
-    
+    {
+      'name':'volume',
+      'description':'speaker volume for our alarm sounds (0...255)',
+      'default':128,
+      'type': 'NUMBER',
+      'rangeOrList': [0,255]
+    }
   ]
   @classmethod
   def pluginInfo(cls):  
@@ -75,6 +81,9 @@ class Plugin(object):
 
   def updateParam(self,newParam):
     self.api.saveConfigValues(newParam)
+    if hasattr(self.api,'registerCommand'):
+      volume=self.api.getConfigValue('volume','128')
+      self.api.registerCommand('sound','sound.sh',parameters=[volume])
  
 
   def stop(self):
@@ -124,6 +133,8 @@ class Plugin(object):
     if not hasPackages:
       raise Exception("missing packages for i2c")
     if hasattr(self.api,'registerCommand'):
+      volume=self.api.getConfigValue('volume','128')
+      self.api.registerCommand('sound','sound.sh',parameters=[volume])
       self.api.registerCommand('dimm','dimm.sh',client='all')
     else:
       self.error="unable to register dimm command, avnav too old"  
