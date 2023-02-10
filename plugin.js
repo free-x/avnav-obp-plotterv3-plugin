@@ -24,7 +24,7 @@ let widgetServer={
          * @param ev
          */
         const fetchCurrent=()=>{
-            return fetch(AVNAV_BASE_URL+"/api/query",{cache: "no-store"})
+            return fetch(AVNAV_BASE_URL+"/api/query?_="+(new Date()).getTime())
             .then((data)=>data.json())
             .then((json)=>{
                 if (json.status !== "OK"){
@@ -39,8 +39,8 @@ let widgetServer={
             })
         }
         const plusMinus=(plus)=>{
-            let url=AVNAV_BASE_URL+"/api/"+(plus?"plus":"minus");
-            fetch(url,{cache: "no-store"})
+            let url=AVNAV_BASE_URL+"/api/"+(plus?"plus":"minus")+"?_="+(new Date()).getTime();
+            fetch(url)
             .then((data)=>data.json())
             .then((json)=>{
                 if (json.status !== 'OK'){
