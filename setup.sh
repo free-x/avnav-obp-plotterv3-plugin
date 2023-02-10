@@ -18,6 +18,7 @@ CONFIG=/boot/config.txt
 read -r -d '' CFGDATA << 'EOF'
 dtoverlay=pwm,pin=12,func=4
 dtparam=spi=on
+dtparam=i2c_arm=on
 dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=1000000
 dtoverlay=goodix,reset=4,interrupt=17
 dtoverlay=hifiberry-dac
@@ -56,6 +57,19 @@ if [ -e $CONFIG ] && grep -q -E "^dtparam=audio=on$" $CONFIG; then
   log "need to disable default sound driver, reboot needed"
   sed -i "s|^dtparam=audio=on$|#dtparam=audio=on|" $CONFIG &> /dev/null
 fi
+MODULES=/etc/modules
+[ ! -f "$MODULES" ] && touch "$MODULES"
+
+if grep -q -E "^ *i2c_dev" "$MODULES" ; then
+  log "i2c module already configured"
+else
+  log "configure i2c module, reboot needed"
+  ret=1
+  sed -i "/i2c_dev/d" "$MODULES"
+  echo "i2c_dev" >> "$MODULES"
+fi
+
+
 
 SOUNDCFG=/etc/asound.conf
 if [ -f "$SOUNDCFG" ] ; then
