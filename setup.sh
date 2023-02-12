@@ -78,7 +78,24 @@ if [ -f "$SOUNDCFG" ] ; then
 fi
 cp `dirname $0`/asound.conf "$SOUNDCFG" || err "unable to set up sound config"
 
-#TODO: should we enable aply to avoid noise?
+#TODO: should we enable aplay to avoid noise?
+
+pdir="`dirname $0`"
+ENSCRIPT="$pdir/../../plugin.sh"
+P1="system-chremote"
+P2="`basename $pdir`"
+PBASE=`echo "$P1" | tr -cd '[a-zA-Z0-9]' | tr '[a-z]' '[A-Z]'`
+if [ -x "$ENSCRIPT" ] ; then
+  log "activating plugins $P1 and $P2"
+  "$ENSCRIPT" unhide "$P1" || err "unable to set config"
+  "$ENSCRIPT" unhide "$P2" || err "unable to set config"
+  log "setting default parameters for $P2"
+  "$ENSCRIPT" set "$P1" irqPin 13 || err "unable to set config"
+  "$ENSCRIPT" set "$P1" i2cAddress 21 || err "unable to set config"
+  
+fi
+
+
 
 exit $ret
 
