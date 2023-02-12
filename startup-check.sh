@@ -91,7 +91,7 @@ if [ -x "$ENSCRIPT" ] ; then
   "$ENSCRIPT" unhide "$P2" || err "unable to set config"
   log "setting default parameters for $P2"
   "$ENSCRIPT" set "$P1" irqPin 13 || err "unable to set config"
-  "$ENSCRIPT" set "$P1" i2cAddress 21 || err "unable to set config"
+  "$ENSCRIPT" set "$P1" i2cAddress 72 || err "unable to set config"
   
 fi
 
