@@ -23,6 +23,7 @@ dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=1000000
 dtoverlay=goodix,reset=4,interrupt=17
 dtoverlay=hifiberry-dac
 dtoverlay=i2s-mmap
+dtoverlay=gpio-shutdown,gpio_pin=22,active_low=1,gpio_pull=up
 EOF
 
 
@@ -95,6 +96,11 @@ if [ -x "$ENSCRIPT" ] ; then
   
 fi
 
+POWEROFF="$pdir/enablePowerOff.sh"
+if [ -x "$POWEROFF" ] ; then
+  log "enabling auto power off"
+  "$POWEROFF" &
+fi
 
 
 exit $ret

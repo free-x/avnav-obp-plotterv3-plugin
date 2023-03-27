@@ -13,13 +13,18 @@ class PWMControl:
   refer to /boot/overlay/README for allowed combinations of pin and func
   '''
   BASE_PATH="/sys/class/pwm/pwmchip0"
-  def __init__(self,frequency=100) -> None:
+  def __init__(self,frequency=100, dimmGpio=None) -> None:
     self.period=None
     self.duty=None
     self.freq=frequency
     self.pwm0=os.path.join(self.BASE_PATH,"pwm0")
     self._setParam(50,frequency)
     self.prepared=False
+    self.dimm=False
+    self.dimmWritten=False
+    self.dimmFile=None
+    if dimmGpio is not None:
+       self.dimmFile="/sys/class/gpio/gpio%d/value"%(dimmGpio)
   def _setParam(self,duty,freq=None):
     if freq is not None:
       self.period=int(1000000000.0/float(freq))
@@ -29,8 +34,25 @@ class PWMControl:
   def _writeDuty(self,duty):
     wfile=os.path.join(self.pwm0,"duty_cycle")
     with open(wfile,"w") as h:
-      h.write(str(duty))    
+      if self.dimm:
+        self.dimmWritten=True
+        h.write("0")
+      else:
+        self.dimmWritten=False   
+        h.write(str(duty))
+  def _checkDim(self):
+    if not os.path.exists(self.dimmFile):
+      return False
+    try:
+       with open(self.dimmFile,"r") as h:
+          v=h.readline()
+          return int(v) == 0
+    except:
+      pass
+    return False
+                  
   def _write(self):
+    self.dimm=self._checkDim()
     wfile=os.path.join(self.pwm0,"period")
     with open(wfile,"r") as h:
       old=h.readline()
@@ -40,7 +62,13 @@ class PWMControl:
     with open(wfile,"w") as h:
       h.write(str(self.period))
     self._writeDuty(self.duty)
+    return not self.dimmWritten
 
+  def checkDimmChange(self):
+     newDimm=self._checkDim()
+     if newDimm != self.dimmWritten:
+        return True
+     return False
   def prepare(self,freq=100,duty=50):
     '''
     prepare the pwm controller
@@ -74,6 +102,7 @@ class PWMControl:
     else:  
       self._setParam(duty)
       self._write()
+    return not self.dimmWritten  
     
 
 if __name__ == '__main__':

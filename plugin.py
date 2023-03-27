@@ -23,6 +23,7 @@ address = None #0xnn
 #frequency for pwm in Hz
 frequency = 1000
 
+DIMM_GPIO=26 #if 1 we are in dimm mode and set duty time to 0
 
 
 class Plugin(object):
@@ -74,11 +75,11 @@ class Plugin(object):
     self.allowRepeat=False
     self.channel=0
     self.currentStep=self.INITIAL_STEP
-    self.pwm=pwm.PWMControl(frequency)
+    self.pwm=pwm.PWMControl(frequency,dimmGpio=DIMM_GPIO)
     self.brightness=0
     self.lock=threading.Lock()
     self.error=None
-
+    
   def updateParam(self,newParam):
     self.api.saveConfigValues(newParam)
     if hasattr(self.api,'registerCommand'):
@@ -108,13 +109,16 @@ class Plugin(object):
       idx=len(self.STEPS)-1
     return self.STEPS[idx]    
 
-
+  
   def update(self,change=0):
     with self.lock:
       duty=self.updateIndex(change)
       try:
-        self.pwm.update(duty)
-        self.api.setStatus('NMEA','brightness %d, step %d, duty %d'%(self.brightness,self.currentStep,duty))
+        dimm=self.pwm.update(duty)
+        if not dimm:
+          self.api.setStatus('NMEA','brightness %d, step %d, duty %d'%(self.brightness,self.currentStep,duty))
+        else:
+          self.api.setStatus('NMEA','dimm active, brightness %d'%(self.brightness))  
         self.error=None
       except Exception as e:
         self.api.setStatus('ERROR',str(e))  
@@ -156,7 +160,10 @@ class Plugin(object):
           try:
             self.update()
           except:
-            pass  
+            pass
+        changed=self.pwm.checkDimmChange()    
+        if changed:
+          self.update()
         if address is not None:
           self.brightness=i2c.read_byte(address)
         time.sleep(1)
