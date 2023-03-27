@@ -21,6 +21,8 @@ license: "MIT"
 contents:
 - src: ./plugin.*
   dst: /usr/lib/avnav/plugins/obp-plotterv3
+- src: ./gui.*
+  dst: /usr/lib/avnav/plugins/obp-plotterv3  
 - src: ./pwm.py
   dst: /usr/lib/avnav/plugins/obp-plotterv3/pwm.py
 - src: ./*.sh

@@ -79,13 +79,26 @@ class Plugin(object):
     self.brightness=0
     self.lock=threading.Lock()
     self.error=None
+    self.soundVolume=128
     
   def updateParam(self,newParam):
     self.api.saveConfigValues(newParam)
     if hasattr(self.api,'registerCommand'):
       volume=self.api.getConfigValue('volume','128')
-      self.api.registerCommand('sound','sound.sh',parameters=[volume])
+      self.updateVolume(volume)
  
+  def updateVolume(self,newVolume):
+    self.soundVolume=newVolume
+    self.api.registerCommand('sound','sound.sh',parameters=[str(newVolume)])
+
+  def changeVolume(self,delta=0):
+    with self.lock:
+      newVolume=int(self.soundVolume)+delta
+      if newVolume < 0:
+        newVolume=0
+      if newVolume > 255:
+        newVolume=255
+      self.updateVolume(newVolume)
 
   def stop(self):
     pass
@@ -136,15 +149,16 @@ class Plugin(object):
     seq=0
     if not hasPackages:
       raise Exception("missing packages for i2c")
+    self.soundVolume=self.api.getConfigValue('volume',128)
     if hasattr(self.api,'registerCommand'):
-      volume=self.api.getConfigValue('volume','128')
-      self.api.registerCommand('sound','sound.sh',parameters=[volume])
+      self.api.registerCommand('sound','sound.sh',parameters=[str(self.soundVolume)])
       self.api.registerCommand('dimm','dimm.sh',client='all')
     else:
       self.error="unable to register dimm command, avnav too old"  
     self.api.registerRequestHandler(self.handleApiRequest)
     self.api.registerSettingsFile('localFirefox','localFirefox.json')
     self.api.registerLayout('localFirefox','localLayout.json')
+    self.api.registerUserApp(self.api.getBaseUrl()+'/gui.html','dimm.svg')
     if self.error is not None:
       self.api.setStatus('ERROR',self.error)
     else:  
@@ -184,13 +198,24 @@ class Plugin(object):
     OK={'status':'OK'}
     try:
       if url == 'query':
-        return {'status':'OK','brightness':self.brightness,'step':self.currentStep,'duty':self.getCurrentDuty(),'error':self.error}
+        return {'status':'OK','brightness':self.brightness,'step':self.currentStep,'duty':self.getCurrentDuty(),'volume':self.soundVolume,'error':self.error}
       if url == 'plus':
         self.update(1)
         return OK
       if url == 'minus':
         self.update(-1)
-        return OK  
+        return OK
+      if url == 'volumePlus':
+        self.changeVolume(1)
+        return OK
+      if url == 'volumeMinus':
+        self.changeVolume(-1)
+        return OK
+      if url == 'saveCurrent':
+        with self.lock:
+          #TODO: initial brightness
+          self.api.saveConfigValues({'volume':self.soundVolume})
+          return OK  
     except Exception as e:
       return {'status':str(e)}    
 
