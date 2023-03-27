@@ -114,8 +114,8 @@ class Plugin(object):
     with self.lock:
       duty=self.updateIndex(change)
       try:
-        dimm=self.pwm.update(duty)
-        if not dimm:
+        normal=self.pwm.update(duty)
+        if normal:
           self.api.setStatus('NMEA','brightness %d, step %d, duty %d'%(self.brightness,self.currentStep,duty))
         else:
           self.api.setStatus('NMEA','dimm active, brightness %d'%(self.brightness))  
