@@ -55,6 +55,7 @@ if [ "$1" = $MODE_EN ] ; then
     log "setting default parameters for $P2"
     "$ENSCRIPT" set "$P1" irqPin 13 || errExit "unable to set config"
     "$ENSCRIPT" set "$P1" i2cAddress 36 || errExit "unable to set config"  
+    "$ENSCRIPT" set "$P1" ENTER z || errExit "unable to set config"  
   fi
 fi
 if [ "$1" != $MODE_DIS ] ; then
