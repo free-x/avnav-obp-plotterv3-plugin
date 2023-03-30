@@ -2,6 +2,8 @@
   "settingsVersion": 1,
   "properties": {
     "localAlarmSound": false,
+    "remoteChannelRead": true,
+    "remoteChannelName": "0",
     "cancelTop": true,
     "layoutName": "$prefix$.localFirefox"
   }
