@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-sleep 10
-
 #   Exports pin to userspace
 echo 23 >/sys/class/gpio/export
 echo 24 >/sys/class/gpio/export
