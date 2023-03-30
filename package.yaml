@@ -38,4 +38,5 @@ contents:
 deb:
   fields:
     avnav-plugin: system-obp-plotterv3
+    avnav-hidden: true
 
