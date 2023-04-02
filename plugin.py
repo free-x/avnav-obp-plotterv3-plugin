@@ -52,11 +52,11 @@ class Plugin(object):
     }
 
   STEPS=[
-    1,3,5,7,10,
+    0.1,0.2,0.4,0.7,1,3,5,7,10,
     15,20,25,30,35,
     40,50,60,70,80,90,99
   ]
-  INITIAL_STEP=11 #index in steps
+  INITIAL_STEP=14 #index in steps
   def __init__(self,api):
     """
         initialize a plugins
@@ -93,7 +93,9 @@ class Plugin(object):
 
   def changeVolume(self,delta=0):
     with self.lock:
-      newVolume=int(self.soundVolume)+delta
+      change=delta*8
+      current=int(self.soundVolume)
+      newVolume=current+change if current < 255 else 256 + change
       if newVolume < 0:
         newVolume=0
       if newVolume > 255:
@@ -215,7 +217,7 @@ class Plugin(object):
         with self.lock:
           #TODO: initial brightness
           self.api.saveConfigValues({'volume':self.soundVolume})
-          return OK  
+          return {'status':'OK','saved':'volume=%s'%str(self.soundVolume)}  
     except Exception as e:
       return {'status':str(e)}    
 

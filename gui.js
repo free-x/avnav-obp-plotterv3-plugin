@@ -62,8 +62,11 @@
             if (el){
                 let command=apiFunctions[k];
                 el.addEventListener('click',async ()=>{
-                    await sendApiRequest(command);
+                    let rt=await sendApiRequest(command);
                     await updateValues();
+                    if (k === 'save' ){
+                        alert("Saved: "+rt.saved)
+                    }
                 })
             }
         }
