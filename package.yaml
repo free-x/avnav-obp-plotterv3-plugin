@@ -27,6 +27,8 @@ contents:
   dst: /usr/lib/avnav/plugins/obp-plotterv3/pwm.py
 - src: ./*.sh
   dst: /usr/lib/avnav/plugins/obp-plotterv3
+  file_info:
+    mode: 0755
 - src: ./*.json
   dst: /usr/lib/avnav/plugins/obp-plotterv3
 - src: ./*.svg
