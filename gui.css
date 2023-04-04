@@ -2,96 +2,115 @@
     position: relative;
     margin: 1em auto;
     padding: 0;
-  
+
     overflow: hidden;
-  
+
     border-width: 0;
     outline: none;
     border-radius: 2px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
-    
+
     background-color: #546E7A;
     color: #ecf0f1;
-    
+
     transition: background-color .3s;
     width: 6em;
     padding: 0.3em
-  }
-  
-  .btn:hover, .btn:focus {
+}
+
+.btn:hover,
+.btn:focus {
     background-color: #546e7ab9;
-  }
-  
-  .btn > * {
+}
+
+.btn>* {
     position: relative;
-  }
-  
-  .btn span {
+}
+
+.btn span {
     display: block;
     padding: 12px 24px;
-  }
-  
-  .btn:before {
+}
+
+.btn:before {
     content: "";
-    
+
     position: absolute;
     top: 50%;
     left: 50%;
-    
+
     display: block;
     width: 0;
     padding-top: 0;
-      
+
     border-radius: 100%;
-    
+
     background-color: rgba(236, 240, 241, .3);
-    
+
     -webkit-transform: translate(-50%, -50%);
     -moz-transform: translate(-50%, -50%);
     -ms-transform: translate(-50%, -50%);
     -o-transform: translate(-50%, -50%);
     transform: translate(-50%, -50%);
-  }
-  
-  .btn:active:before {
+}
+
+.btn:active:before {
     width: 120%;
     padding-top: 120%;
-    
+
     transition: width .2s ease-out, padding-top .2s ease-out;
-  }
-  
-  /* Styles, not important */
-  *, *:before, *:after {
+}
+
+/* Styles, not important */
+*,
+*:before,
+*:after {
     box-sizing: border-box;
-  }
-  
-  html {
+}
+
+html {
     position: relative;
     height: 100%;
-  }
-  
-  .row {
+}
+
+.row {
     max-width: 20em;
     margin-left: auto;
     margin-right: auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.section {
+    width: 6em;
+}
+.buttons {
+    display: inline-block;
+    width: 13em;
+    flex-shrink: 0;
+}
+.buttons .value {
+    display: inline-block;
+    width: 2em;
+    text-align: right;
 }
 .toast {
-  height: auto;
-  position: fixed;
-  left: 50px;
-  bottom: 10px;
-  background-color: #383838;
-  color: #F0F0F0;
-  font-size: 1.5em;
-  padding: 1em;
-  text-align: center;
-  border-radius: 2px;
-  -webkit-box-shadow: 0px 0px 24px -1px #383838;
-  -moz-box-shadow: 0px 0px 24px -1px #383838;
-  box-shadow: 0px 0px 24px -1px #383838;
-  z-index: 9999;
+    height: auto;
+    position: fixed;
+    left: 50px;
+    bottom: 10px;
+    background-color: #383838;
+    color: #F0F0F0;
+    font-size: 1.5em;
+    padding: 1em;
+    text-align: center;
+    border-radius: 2px;
+    -webkit-box-shadow: 0px 0px 24px -1px #383838;
+    -moz-box-shadow: 0px 0px 24px -1px #383838;
+    box-shadow: 0px 0px 24px -1px #383838;
+    z-index: 9999;
 }
 
-.hidden{
-  display: none;
+.hidden {
+    display: none;
 }

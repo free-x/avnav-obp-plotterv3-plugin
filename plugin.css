@@ -1,6 +1,9 @@
 .obpPlotter{
     pointer-events: none;
 }
+.editing .obpPlotter{
+    pointer-events: inherit;
+}
 .obpPlotter .row {
     display: flex;
     flex-direction: row;
@@ -16,6 +19,9 @@
 }
 .obpPlotter .error{
     color: red;
+}
+.obpPlotter .label {
+    margin-right: 0.5em;
 }
 
 .button.Dim span{

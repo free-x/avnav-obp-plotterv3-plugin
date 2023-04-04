@@ -38,6 +38,7 @@
     }
     let currentBrightness;
     let currentVolume;
+    let currentLuminance;
     const updateValues = async () => {
         let data = await sendApiRequest("query");
         if (data) {
@@ -47,11 +48,18 @@
             if (data.volume !== undefined){
                 currentVolume.textContent = data.volume;
             }
+            if (data.brightnessError !== null){
+                currentLuminance.textContent ="ERROR: "+data.brightnessError;
+            }
+            else{
+                currentLuminance.textContent = data.brightness;
+            }
         }
     }
     window.addEventListener('load',()=>{
         currentBrightness=document.getElementById('currentBrightness');
         currentVolume=document.getElementById('currentVolume');
+        currentLuminance=document.getElementById('currentLuminance');
         toast=document.getElementById('toast');
         toast.addEventListener('click',()=>toast.classList.add('hidden'));
         window.setInterval(async ()=>{

@@ -30,10 +30,12 @@ let widgetServer={
                 if (json.status !== "OK"){
                     context.duty="???"
                     context.error=json.status||"Error"
+                    context.brightness="Error";
                 }
                 else{
                     context.duty=json.duty+"";
                     context.error=json.error;
+                    context.brightness=(json.brightnessError !== null)?"Error":json.brightness
                 }
                 context.triggerRedraw();
             })
@@ -82,14 +84,19 @@ let widgetServer={
         var replacements={
             duty:this.error?"Error":this.duty,
             disabled: '',
-            errorClass: this.error?"error":""
+            errorClass: this.error?"error":"",
+            brightness: this.brightness
         };
         var template='<div class="widgetData">' +
             '<div class="row">'+
             '<button class="plusminus" ${disabled}  onclick="minusClick">-</button>' +
             '<button class="plusminus" ${disabled}  onclick="plusClick">+</button>' +
             '</div>'+
-            '<div class="server ${errorClass}">${duty}</div></div>';
+            '<div class="server ${errorClass}">${duty}</div>'
+        if (props.showLuminance){
+            template+='<div class="luminance"><span class="label">Lum</span>${brightness}</div>';
+        }    
+        template+='</div>';        
         return avnav.api.templateReplace(template,replacements);
     },
     caption: "Brightness",
@@ -99,5 +106,10 @@ let widgetServer={
     }
 };
 
-avnav.api.registerWidget(widgetServer);
+avnav.api.registerWidget(widgetServer,{
+    showLuminance: {type:'BOOLEAN',default:false},
+    formatter: false,
+    formatterParameters:false,
+    unit: false
+});
 avnav.api.log("obp plotter plugin widgets registered");

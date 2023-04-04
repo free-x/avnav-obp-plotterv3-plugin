@@ -18,7 +18,7 @@ except:
   hasPackages=False
 
 # brightness receiver address (i2c)
-address = None #0xnn
+address = 0x23
 
 #frequency for pwm in Hz
 frequency = 1000
@@ -34,6 +34,12 @@ class Plugin(object):
       'default':128,
       'type': 'NUMBER',
       'rangeOrList': [0,255]
+    },
+    {
+      'name':'adaptiveBrightness',
+      'description':'adapt screen brightness to environmental brightness',
+      'default': False,
+      'type':'BOOLEAN'
     }
   ]
   @classmethod
@@ -57,6 +63,9 @@ class Plugin(object):
     40,50,60,70,80,90,99
   ]
   INITIAL_STEP=14 #index in steps
+
+  BRIGHTNESS_AV_FACTOR=0.2 #movin average factor for brightness
+
   def __init__(self,api):
     """
         initialize a plugins
@@ -80,6 +89,7 @@ class Plugin(object):
     self.lock=threading.Lock()
     self.error=None
     self.soundVolume=128
+    self.brightnessError=None
     
   def updateParam(self,newParam):
     self.api.saveConfigValues(newParam)
@@ -140,6 +150,31 @@ class Plugin(object):
         self.error=str(e)
         raise
 
+  def readBrightness(self,i2c,address):
+    data = i2c.read_i2c_block_data(address,0x10)
+    if len(data) != 2:
+      raise Exception("invalid data len %d"%len(data))
+    return (data[1] + (256 * data[0]))
+
+  def adaptiveBrightness(self,userDuty):
+    active=self.api.getConfigValue('adaptiveBrightness','False')
+    if not type(active) is bool:
+      active=str(active).lower() == 'true'
+    if not active:
+      return userDuty
+    if self.brightnessError is not None:
+      return userDuty
+    minBrightness=10
+    maxBrightness=5000
+    currentBrightness=self.brightness
+    if currentBrightness < minBrightness:
+      currentBrightness=minBrightness
+    if currentBrightness > maxBrightness:
+      currentBrightness=maxBrightness
+    value=100.0 - float(currentBrightness-minBrightness)/float(maxBrightness-minBrightness)*100.0
+    value=int(value)
+    self.api.debug("computed duty %d from brightness %f",value,currentBrightness)
+    return value
 
   def run(self):
     """
@@ -170,6 +205,12 @@ class Plugin(object):
     if currentMode is None:
       gpio.setmode(gpio.BOARD)
     self.api.log("gpio mode=%d",gpio.getmode())
+    if address is not None:
+      try:
+        i2c.write_byte(address,0x10)
+      except Exception as e:
+        self.brightnessError=str(e)
+        self.api.error("Unable to trigger brightness read: %s",str(e))
     while not self.api.shouldStopMainThread():
       try:
         if not self.pwm.prepared:
@@ -181,7 +222,20 @@ class Plugin(object):
         if changed:
           self.update()
         if address is not None:
-          self.brightness=i2c.read_byte(address)
+          try:
+            newBrightness=self.readBrightness(i2c,address)
+            if self.brightnessError is not None or self.brightness is None:
+              self.brightness=newBrightness
+            else:
+              diff=float(newBrightness)-float(self.brightness)
+              self.brightness=float(self.brightness)+self.BRIGHTNESS_AV_FACTOR*diff
+            self.brightnessError=None
+          except Exception as e:
+            if self.brightnessError is None:
+              self.brightnessError="Read:%"%str(e)
+              self.api.error("unable to read brightness: %s",self.brightnessError)    
+            else:
+              self.brightnessError=str(e)  
         time.sleep(1)
       except Exception as e:
         self.api.setStatus("ERROR","%s"%str(e))
@@ -200,7 +254,13 @@ class Plugin(object):
     OK={'status':'OK'}
     try:
       if url == 'query':
-        return {'status':'OK','brightness':self.brightness,'step':self.currentStep,'duty':self.getCurrentDuty(),'volume':self.soundVolume,'error':self.error}
+        return {'status':'OK',
+                'brightness':int(self.brightness) if self.brightness is not None else None,
+                'step':self.currentStep,
+                'duty':self.getCurrentDuty(),
+                'volume':self.soundVolume,
+                'error':self.error,
+                'brightnessError': self.brightnessError}
       if url == 'plus':
         self.update(1)
         return OK
