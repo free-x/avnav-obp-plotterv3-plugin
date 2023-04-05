@@ -1,6 +1,7 @@
 .btn {
     position: relative;
-    margin: 1em auto;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
     padding: 0;
 
     overflow: hidden;
@@ -74,19 +75,20 @@ html {
 }
 
 .row {
-    max-width: 20em;
+    max-width: 23em;
     margin-left: auto;
     margin-right: auto;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    margin-top: 0.5em;
+    margin-bottom: 1em;
 }
 .section {
     width: 6em;
 }
 .buttons {
     display: inline-block;
-    width: 13em;
     flex-shrink: 0;
 }
 .buttons .value {

@@ -27,16 +27,18 @@ DIMM_GPIO=26 #if 1 we are in dimm mode and set duty time to 0
 
 
 class Plugin(object):
+  CFG_AUTO='adaptiveBrightness'
+  CFG_VOLUME='volume'
   CONFIG=[
     {
-      'name':'volume',
+      'name':CFG_VOLUME,
       'description':'speaker volume for our alarm sounds (0...255)',
       'default':128,
       'type': 'NUMBER',
       'rangeOrList': [0,255]
     },
     {
-      'name':'adaptiveBrightness',
+      'name':CFG_AUTO,
       'description':'adapt screen brightness to environmental brightness',
       'default': False,
       'type':'BOOLEAN'
@@ -123,7 +125,7 @@ class Plugin(object):
       self.currentStep= len(self.STEPS)-1
     return self.STEPS[self.currentStep]
 
-  def getCurrentDuty(self):
+  def getCurrentDuty(self,adapt):
     '''
     get step without changing value
     '''
@@ -132,48 +134,86 @@ class Plugin(object):
       idx=0
     if idx >= len(self.STEPS):
       idx=len(self.STEPS)-1
-    return self.STEPS[idx]    
+    rt= self.STEPS[idx]
+    if not adapt:
+      return rt 
+    return self.adaptiveBrightness(rt)  
 
+  def updateStatus(self):
+    if self.error is not None:
+      self.api.setStatus('ERROR',self.error)
+    else:
+      if self.brightnessError is not None:
+        if self.pwm.dimmWritten:
+          self.api.setStatus('STARTED',"dimm active, luminance error %s"%self.brightnessError)
+        else:
+          self.api.setStatus('STARTED',"adaptive %s, step %d duty %.2f, luminance error %s"
+                             %(self._adaptiveOn(),self.currentStep,self.getCurrentDuty(True),self.brightnessError))
+      else:
+        if self.pwm.dimmWritten:
+          self.api.setStatus('NMEA',"dimm active, luminance %d"%self.brightness)
+        else:
+          self.api.setStatus('NMEA',"adaptive %s, step %d duty %.2f, luminance %d"
+                             %(self._adaptiveOn(),self.currentStep,self.getCurrentDuty(True),self.brightness))      
+      
   
   def update(self,change=0):
     with self.lock:
       duty=self.updateIndex(change)
       try:
-        normal=self.pwm.update(duty)
-        if normal:
-          self.api.setStatus('NMEA','brightness %d, step %d, duty %d'%(self.brightness,self.currentStep,duty))
-        else:
-          self.api.setStatus('NMEA','dimm active, brightness %d'%(self.brightness))  
+        self.pwm.update(self.adaptiveBrightness(duty))
         self.error=None
+        self.updateStatus()
       except Exception as e:
-        self.api.setStatus('ERROR',str(e))  
         self.error=str(e)
+        self.updateStatus()
         raise
 
   def readBrightness(self,i2c,address):
-    data = i2c.read_i2c_block_data(address,0x10)
+    data=None
+    tst=os.getenv('AVNAV_TEST_LUM')
+    if tst is not None:
+      with open(tst,'rb') as h:
+        data=h.read()
+    else:    
+      data = i2c.read_i2c_block_data(address,0x10)
     if len(data) != 2:
       raise Exception("invalid data len %d"%len(data))
     return (data[1] + (256 * data[0]))
 
-  def adaptiveBrightness(self,userDuty):
+  def _adaptiveOn(self):
     active=self.api.getConfigValue('adaptiveBrightness','False')
     if not type(active) is bool:
       active=str(active).lower() == 'true'
+    return active
+  
+
+  def adaptiveBrightness(self,userDuty):
+    active=self._adaptiveOn()
     if not active:
       return userDuty
     if self.brightnessError is not None:
       return userDuty
-    minBrightness=10
-    maxBrightness=5000
-    currentBrightness=self.brightness
-    if currentBrightness < minBrightness:
-      currentBrightness=minBrightness
-    if currentBrightness > maxBrightness:
-      currentBrightness=maxBrightness
-    value=100.0 - float(currentBrightness-minBrightness)/float(maxBrightness-minBrightness)*100.0
-    value=int(value)
-    self.api.debug("computed duty %d from brightness %f",value,currentBrightness)
+    minLuminance=10.0
+    maxLuminance=5000.0
+    currentLuminance=float(self.brightness)
+    if currentLuminance < minLuminance:
+      currentLuminance=minLuminance
+    if currentLuminance > maxLuminance:
+      currentLuminance=maxLuminance
+    currentOffset=currentLuminance-minLuminance  
+    value=currentOffset/float(maxLuminance-minLuminance)*100.0
+    # we give the user a chance to modify our adaptive brightness
+    # if the user selected brightness is at 100% 
+    # we ensure that we at least reach our initial brightness
+    defaultUser=self.STEPS[self.INITIAL_STEP]
+    if userDuty != defaultUser:
+      value+=(userDuty-defaultUser)*defaultUser/(100-defaultUser)
+      if value < 0:
+        value = 0
+      if value > 100:
+        value=100  
+    self.api.debug("computed duty %f from brightness %f",value,currentLuminance)
     return value
 
   def run(self):
@@ -232,13 +272,15 @@ class Plugin(object):
             self.brightnessError=None
           except Exception as e:
             if self.brightnessError is None:
-              self.brightnessError="Read:%"%str(e)
+              self.brightnessError="Read:%s"%str(e)
               self.api.error("unable to read brightness: %s",self.brightnessError)    
             else:
-              self.brightnessError=str(e)  
+              self.brightnessError=str(e)
+        self.updateStatus()        
         time.sleep(1)
       except Exception as e:
-        self.api.setStatus("ERROR","%s"%str(e))
+        self.error=str(e)
+        self.updateStatus()
         time.sleep(1)
 
 
@@ -257,15 +299,22 @@ class Plugin(object):
         return {'status':'OK',
                 'brightness':int(self.brightness) if self.brightness is not None else None,
                 'step':self.currentStep,
-                'duty':self.getCurrentDuty(),
+                'duty':self.getCurrentDuty(True),
+                'userDuty': self.getCurrentDuty(False),
                 'volume':self.soundVolume,
                 'error':self.error,
-                'brightnessError': self.brightnessError}
+                'brightnessError': self.brightnessError,
+                'auto': self._adaptiveOn()
+                }
       if url == 'plus':
         self.update(1)
         return OK
       if url == 'minus':
         self.update(-1)
+        return OK
+      if url == 'defaultStep':
+        change=self.INITIAL_STEP-self.currentStep
+        self.update(change)
         return OK
       if url == 'volumePlus':
         self.changeVolume(1)
@@ -273,10 +322,16 @@ class Plugin(object):
       if url == 'volumeMinus':
         self.changeVolume(-1)
         return OK
+      if url == 'autoOn':
+        self.api.saveConfigValues({self.CFG_AUTO:True})
+        return OK
+      if url == 'autoOff':
+        self.api.saveConfigValues({self.CFG_AUTO:False})
+        return OK
       if url == 'saveCurrent':
         with self.lock:
           #TODO: initial brightness
-          self.api.saveConfigValues({'volume':self.soundVolume})
+          self.api.saveConfigValues({self.CFG_VOLUME:self.soundVolume})
           return {'status':'OK','saved':'volume=%s'%str(self.soundVolume)}  
     except Exception as e:
       return {'status':str(e)}    

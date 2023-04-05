@@ -34,16 +34,18 @@
         volumePlus:'volumePlus',
         dimmMinus:'minus',
         dimmPlus:'plus',
-        save: 'saveCurrent'
+        save: 'saveCurrent',
+        defaultBrightness: 'defaultStep'
     }
     let currentBrightness;
     let currentVolume;
     let currentLuminance;
+    let adaptive;
     const updateValues = async () => {
         let data = await sendApiRequest("query");
         if (data) {
             if (data.duty !== undefined) {
-                currentBrightness.textContent = data.duty;
+                currentBrightness.textContent = data.duty.toFixed(2);
             }
             if (data.volume !== undefined){
                 currentVolume.textContent = data.volume;
@@ -54,6 +56,7 @@
             else{
                 currentLuminance.textContent = data.brightness;
             }
+            adaptive.checked=data.auto;
         }
     }
     window.addEventListener('load',()=>{
@@ -77,6 +80,18 @@
                     }
                 })
             }
+        }
+        adaptive=document.getElementById('autoOn');
+        if (adaptive){
+            adaptive.addEventListener('change',async ()=>{
+                if (adaptive.checked){
+                    await sendApiRequest('autoOn');    
+                }
+                else{
+                    await sendApiRequest('autoOff');
+                }
+                await updateValues();
+            })
         }
     })
 })();
