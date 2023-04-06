@@ -282,7 +282,7 @@ class Plugin(object):
     self.api.registerRequestHandler(self.handleApiRequest)
     self.api.registerSettingsFile('localFirefox','localFirefox.json')
     self.api.registerLayout('localFirefox','localLayout.json')
-    self.api.registerUserApp(self.api.getBaseUrl()+'/gui.html','dimm.svg')
+    self.api.registerUserApp(self.api.getBaseUrl()+'/gui.html','plotter.svg')
     if self.error is not None:
       self.api.setStatus('ERROR',self.error)
     else:  
