@@ -11,6 +11,7 @@ dn=os.path.dirname(__file__)
 sys.path.append(dn)
 import pwm
 hasPackages=True
+gpio=None 
 try:
   import smbus
   import RPi.GPIO as gpio
@@ -23,12 +24,25 @@ address = 0x23
 #frequency for pwm in Hz
 frequency = 1000
 
-DIMM_GPIO=26 #if 1 we are in dimm mode and set duty time to 0
+class GpioCfg:
+  def __init__(self,board,bcm) -> None:
+    self.board=board
+    self.bcm=bcm
+  def getPin(self,mode):
+    if mode == gpio.BOARD:
+      return self.board
+    else:
+      return self.bcm  
+
+DIMM_GPIO=GpioCfg(37,26) #if 1 we are in dimm mode and set duty time to 0
+START_BT=GpioCfg(15,22) #if detected low on startup we reset brightness
 
 
 class Plugin(object):
   CFG_AUTO='adaptiveBrightness'
   CFG_VOLUME='volume'
+  CFG_MINLUM='minLuminance'
+  CFG_MAXLUM='maxLuminance'
   CONFIG=[
     {
       'name':CFG_VOLUME,
@@ -42,6 +56,18 @@ class Plugin(object):
       'description':'adapt screen brightness to environmental brightness',
       'default': False,
       'type':'BOOLEAN'
+    },
+    {
+      'name':CFG_MINLUM,
+      'description':'the luminance value for minimal brightness',
+      'default': 10.0,
+      'type':'FLOAT'
+    },
+    {
+      'name':CFG_MAXLUM,
+      'description':'the luminance value for 100% brightness',
+      'default': 5000.0,
+      'type':'FLOAT'
     }
   ]
   @classmethod
@@ -86,12 +112,23 @@ class Plugin(object):
     self.allowRepeat=False
     self.channel=0
     self.currentStep=self.INITIAL_STEP
-    self.pwm=pwm.PWMControl(frequency,dimmGpio=DIMM_GPIO)
-    self.brightness=0
+    dimmGpio=None
+    self.startButton=None
+    if gpio is not None:
+      self.gpioMode=gpio.getmode()
+      if self.gpioMode is None:
+        gpio.setmode(gpio.BOARD)
+        self.gpioMode=gpio.getmode()
+      dimmGpio=DIMM_GPIO.getPin(self.gpioMode)
+      self.startButton=START_BT.getPin(self.gpioMode)
+      gpio.setup(self.startButton,gpio.IN)
+    self.pwm=pwm.PWMControl(frequency,dimmGpio=dimmGpio)
+    self.luminance=0
     self.lock=threading.Lock()
     self.error=None
     self.soundVolume=128
-    self.brightnessError=None
+    self.luminanceError=None
+    self.firstStart=True
     
   def updateParam(self,newParam):
     self.api.saveConfigValues(newParam)
@@ -143,18 +180,18 @@ class Plugin(object):
     if self.error is not None:
       self.api.setStatus('ERROR',self.error)
     else:
-      if self.brightnessError is not None:
+      if self.luminanceError is not None:
         if self.pwm.dimmWritten:
-          self.api.setStatus('STARTED',"dimm active, luminance error %s"%self.brightnessError)
+          self.api.setStatus('STARTED',"dimm active, luminance error %s"%self.luminanceError)
         else:
           self.api.setStatus('STARTED',"adaptive %s, step %d duty %.2f, luminance error %s"
-                             %(self._adaptiveOn(),self.currentStep,self.getCurrentDuty(True),self.brightnessError))
+                             %(self._adaptiveOn(),self.currentStep,self.getCurrentDuty(True),self.luminanceError))
       else:
         if self.pwm.dimmWritten:
-          self.api.setStatus('NMEA',"dimm active, luminance %d"%self.brightness)
+          self.api.setStatus('NMEA',"dimm active, luminance %d"%self.luminance)
         else:
           self.api.setStatus('NMEA',"adaptive %s, step %d duty %.2f, luminance %d"
-                             %(self._adaptiveOn(),self.currentStep,self.getCurrentDuty(True),self.brightness))      
+                             %(self._adaptiveOn(),self.currentStep,self.getCurrentDuty(True),self.luminance))      
       
   
   def update(self,change=0):
@@ -187,22 +224,32 @@ class Plugin(object):
       active=str(active).lower() == 'true'
     return active
   
+  def _getFloat(self,name,default):
+    try:
+      rt=self.api.getConfigValue(name,default)
+      return float(rt)
+    except:
+      return default
 
   def adaptiveBrightness(self,userDuty):
     active=self._adaptiveOn()
     if not active:
       return userDuty
-    if self.brightnessError is not None:
+    if self.luminanceError is not None:
       return userDuty
-    minLuminance=10.0
-    maxLuminance=5000.0
-    currentLuminance=float(self.brightness)
+    minLuminance=self._getFloat(self.CFG_MINLUM,10.0)
+    maxLuminance=self._getFloat(self.CFG_MAXLUM,5000.0)
+    currentLuminance=float(self.luminance)
     if currentLuminance < minLuminance:
       currentLuminance=minLuminance
     if currentLuminance > maxLuminance:
       currentLuminance=maxLuminance
     currentOffset=currentLuminance-minLuminance  
+    minValue=self.STEPS[0]
     value=currentOffset/float(maxLuminance-minLuminance)*100.0
+    if value < minValue:
+      #ensure some minimal brightness
+      value=minValue
     # we give the user a chance to modify our adaptive brightness
     # if the user selected brightness is at 100% 
     # we ensure that we at least reach our initial brightness
@@ -241,16 +288,22 @@ class Plugin(object):
     else:  
       self.api.setStatus('NMEA','running')  
     i2c = smbus.SMBus(1)
-    currentMode=gpio.getmode()
-    if currentMode is None:
-      gpio.setmode(gpio.BOARD)
-    self.api.log("gpio mode=%d",gpio.getmode())
+    self.api.log("gpio mode=%d",self.gpioMode)
+    if self.firstStart:
+      self.firstStart=False
+      if self.startButton is not None:
+        if gpio.input(self.startButton) == gpio.LOW:
+          self.api.log("start button pressed on first start, reset brightness")
+          self.currentStep=self.INITIAL_STEP
+          self.api.saveConfigValues({self.CFG_AUTO:False})
     if address is not None:
       try:
         i2c.write_byte(address,0x10)
       except Exception as e:
-        self.brightnessError=str(e)
+        self.luminanceError=str(e)
         self.api.error("Unable to trigger brightness read: %s",str(e))
+    lastLuminance=None
+    lastadaptive=None    
     while not self.api.shouldStopMainThread():
       try:
         if not self.pwm.prepared:
@@ -258,26 +311,34 @@ class Plugin(object):
             self.update()
           except:
             pass
-        changed=self.pwm.checkDimmChange()    
-        if changed:
-          self.update()
         if address is not None:
           try:
             newBrightness=self.readBrightness(i2c,address)
-            if self.brightnessError is not None or self.brightness is None:
-              self.brightness=newBrightness
+            if self.luminanceError is not None or self.luminance is None:
+              self.luminance=newBrightness
             else:
-              diff=float(newBrightness)-float(self.brightness)
-              self.brightness=float(self.brightness)+self.BRIGHTNESS_AV_FACTOR*diff
-            self.brightnessError=None
+              diff=float(newBrightness)-float(self.luminance)
+              self.luminance=float(self.luminance)+self.BRIGHTNESS_AV_FACTOR*diff
+            self.luminanceError=None
           except Exception as e:
-            if self.brightnessError is None:
-              self.brightnessError="Read:%s"%str(e)
-              self.api.error("unable to read brightness: %s",self.brightnessError)    
+            self.luminance=None
+            if self.luminanceError is None:
+              self.luminanceError="Read:%s"%str(e)
+              self.api.error("unable to read brightness: %s",self.luminanceError)    
             else:
-              self.brightnessError=str(e)
+              self.luminanceError=str(e)
+        changed=self.pwm.checkDimmChange()
+        if lastLuminance != self.luminance:
+          changed=True
+          lastLuminance=self.luminance
+        newadaptive=self._adaptiveOn()
+        if newadaptive != lastadaptive:
+          changed=True
+          lastadaptive=newadaptive  
+        if changed:
+          self.update()      
         self.updateStatus()        
-        time.sleep(1)
+        time.sleep(0.5)
       except Exception as e:
         self.error=str(e)
         self.updateStatus()
@@ -297,13 +358,13 @@ class Plugin(object):
     try:
       if url == 'query':
         return {'status':'OK',
-                'brightness':int(self.brightness) if self.brightness is not None else None,
+                'brightness':int(self.luminance) if self.luminance is not None else None,
                 'step':self.currentStep,
                 'duty':self.getCurrentDuty(True),
                 'userDuty': self.getCurrentDuty(False),
                 'volume':self.soundVolume,
                 'error':self.error,
-                'brightnessError': self.brightnessError,
+                'brightnessError': self.luminanceError,
                 'auto': self._adaptiveOn()
                 }
       if url == 'plus':

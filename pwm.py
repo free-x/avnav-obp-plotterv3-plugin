@@ -3,6 +3,11 @@ import os
 import sys
 import traceback
 import time
+gpio=None
+try:
+  import RPi.GPIO as gpio
+except:
+   pass
 
 class PWMControl:
   '''
@@ -23,8 +28,11 @@ class PWMControl:
     self.dimm=False
     self.dimmWritten=False
     self.dimmFile=None
+    self.dimmGpio=None
     if dimmGpio is not None:
-       self.dimmFile="/sys/class/gpio/gpio%d/value"%(dimmGpio)
+       self.dimmGpio=dimmGpio
+       gpio.setup(self.dimmGpio,gpio.IN)
+    
   def _setParam(self,duty,freq=None):
     if freq is not None:
       self.period=int(1000000000.0/float(freq))
@@ -41,15 +49,13 @@ class PWMControl:
         self.dimmWritten=False   
         h.write(str(duty))
   def _checkDim(self):
-    if not os.path.exists(self.dimmFile):
-      return False
+    if self.dimmGpio is None:
+       return False
     try:
-       with open(self.dimmFile,"r") as h:
-          v=h.readline()
-          return int(v) == 0
-    except:
-      pass
-    return False
+       return gpio.input(self.dimmGpio) == gpio.LOW
+    except Exception as e:
+       return False
+    
                   
   def _write(self):
     self.dimm=self._checkDim()
