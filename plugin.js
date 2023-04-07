@@ -82,7 +82,7 @@ let widgetServer={
         var buttonClass="plusminus";
         //as we are not sure if the browser supports template strings we use the AvNav helper for that...
         var replacements={
-            duty:this.error?"Error":this.duty,
+            duty:this.error?"Error":avnav.api.formatter.formatDecimal(this.duty||0,3,1),
             disabled: '',
             errorClass: this.error?"error":"",
             brightness: this.brightness
