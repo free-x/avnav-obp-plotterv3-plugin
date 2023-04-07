@@ -213,7 +213,7 @@ class Plugin(object):
       with open(tst,'rb') as h:
         data=h.read()
     else:    
-      data = i2c.read_i2c_block_data(address,0x10)
+      data = i2c.read_i2c_block_data(address,0x10,2)
     if len(data) != 2:
       raise Exception("invalid data len %d"%len(data))
     return (data[1] + (256 * data[0]))
@@ -256,8 +256,8 @@ class Plugin(object):
     defaultUser=self.STEPS[self.INITIAL_STEP]
     if userDuty != defaultUser:
       value+=(userDuty-defaultUser)*defaultUser/(100-defaultUser)
-      if value < 0:
-        value = 0
+      if value < minValue:
+        value = minValue
       if value > 100:
         value=100  
     self.api.debug("computed duty %f from brightness %f",value,currentLuminance)
