@@ -1,0 +1,6 @@
+## Initramfs-Splash
+image=splash1.png
+fullscreen=1
+stretch=1
+
+
