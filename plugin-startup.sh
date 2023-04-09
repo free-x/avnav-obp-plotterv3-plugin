@@ -28,11 +28,20 @@ read -r -d '' MODULES << 'MODULES'
 i2c_dev
 MODULES
 
+read -r -d '' XINITRC << 'XINITRC'
+xli -onroot -fillscreen -quiet /usr/lib/avnav/plugins/obp-plotterv3/splash/splash3.png
+(sleep 20 ; xsetroot -bg black ) &
+XINITRC
+
 needsReboot=0
 ENSCRIPT="$pdir/../../plugin.sh"
 P1="system-chremote"
 P2="system-`basename $pdir`"
 service=obpplotterv3.service
+servicefile="/etc/systemd/system/$service"
+xinitfile='/home/pi/.xinitrc.d/early-obpplotterv3'
+xinitdir="`dirname \"$xinitfile\"`"
+xinituser='pi:pi'
 if [ "$1" = $MODE_EN ] ; then
   log "enable OBPPLOTTERV3"
   checkConfig "$BOOTCONFIG" "$PATTERN" "$CFGDATA"
@@ -49,25 +58,40 @@ if [ "$1" = $MODE_EN ] ; then
   SOUNDCFG=/etc/asound.conf
   replaceConfig "$SOUNDCFG" "$sound"
   checkRes
+  
+  # splash image handling
+  # (1) copy initramfs and splash1 to /boot
   for f in initramfs.img splash.txt splash1.png
   do
     log "copy $f to /boot"
     cp "$pdir/splash/$f" /boot || errExit "unable to copy $f to boot"
   done
+  # (2) adapt cmdline.txt for fewer messages
   if grep -q logo.nologox /boot/cmdline.txt ; then
     log "/boot/cmdline OK"
   else
     log "change /boot/cmdline"
     needsReboot=1
-    sed -i 's/.*/& logo.nologo splash silent quiet vt.global_cursor_default=0' /boot/cmdline.txt || errExit "unable to modify /boot/cmdline.txt"  
+    sed -i 's/.*/& logo.nologo splash silent quiet vt.global_cursor_default=0/' /boot/cmdline.txt || errExit "unable to modify /boot/cmdline.txt"  
   fi
-  servicefile="/etc/systemd/system/$service"
-  if [ ! -f "$servicefile" ] ; then
-    log "creating $servicefile"
-    cp "$pdir/splash/$service" $servicefile || errExit "unable to create $servicefile"
-    needsReboot=1
-    systemctl enable $service
+  # (3) create a service to show second splash image
+  # as soon as the driver initialization is done
+  serviceData="`cat \"$pdir/splash/$service\"`"
+  replaceConfig "$servicefile" "$serviceData"
+  checkRes
+  systemctl enable $service
+
+  # (4) add an xinit scipt to be called very early
+  # this will show the 3rd splash image now on X
+  replaceConfig "$xinitfile" "$XINITRC"
+  if [ $? -lt 0 ] ; then
+    err "unable to create $xinitfile"
   fi
+  chown -R "$xinituser" "$xinitdir" || err "unable to change ownership for $xinitdir"
+
+  # (5) disable login on tty1
+  systemctl disable getty@tty1.service
+
   if [ -x "$ENSCRIPT" ] ; then
     log "activating plugins $P1 and $P2"
     "$ENSCRIPT" unhide "$P1" || errExit "unable to set config"
@@ -77,6 +101,7 @@ if [ "$1" = $MODE_EN ] ; then
     "$ENSCRIPT" set "$P1" i2cAddress 36 || errExit "unable to set config"  
     "$ENSCRIPT" set "$P1" ENTER z || errExit "unable to set config"  
   fi
+  
 fi
 if [ "$1" != $MODE_DIS ] ; then
   POWEROFF="$pdir/enablePowerOff.sh"
@@ -90,6 +115,8 @@ if [ "$1" = $MODE_DIS ] ; then
   removeConfig "$BOOTCONFIG" "$PATTERN"
   removeConfig /etc/modules "$PATTERN"
   systemctl disable service=obpplotterv3.service
+  rm -f "$servicefile"
+  rm -f "$xinitfile"
   if [ -x "$ENSCRIPT" ] ; then
     "$ENSCRIPT" hide "$P2"
   fi

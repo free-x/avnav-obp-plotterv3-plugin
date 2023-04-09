@@ -1,6 +1,6 @@
 [Unit]
 Description=boot splash screen 
 [Service] 
-ExecStart=/user/lib/avnav/plugins/obp-plotterv3/splash/bootsplash.sh
+ExecStart=/usr/lib/avnav/plugins/obp-plotterv3/splash/bin/bootsplash.sh
 [Install]
 WantedBy=basic.target

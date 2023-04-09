@@ -26,5 +26,5 @@ if [ ! -c $dev ] ; then
   exit 1
 fi
 echo "$dev available, loading image"
-`dirname $0`/fbsplash --resize --freeaspect `dirname $0`/splash2.png
+`dirname $0`/fbsplash --resize --freeaspect `dirname $0`/../splash2.png
 echo "bootsplash done"

@@ -13,6 +13,7 @@ depends:
 - avnav
 - python3-smbus
 - python3-rpi.gpio
+- xli
 maintainer: "Andreas Vogel <andreas@wellenvogel.de>"
 description: |
   AvNav plugin to handle obp-plotterv3

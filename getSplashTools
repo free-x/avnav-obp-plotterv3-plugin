@@ -2,7 +2,7 @@
 #get the tools for displaying the splash screen
 GITREPO=https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img
 TARGET=initramfs.img
-pdir=`dirname $0`
+pdir=`dirname $0`/splash
 err(){
     echo "ERROR: $*"
     exit 1
@@ -17,7 +17,7 @@ toolpath="$pdir/$tool"
 rm -f "$toolpath"
 ( cd $pdir && zcat "$TARGET" | cpio -i -d "$tool") || err "unable to extract fbsplash"
 [ ! -f "$toolpath" ] && err "could not extract $toolpath"
-echo "got $TARGET, $toolpath"
+echo "got $TARGETFILE, $toolpath"
 
 
 
