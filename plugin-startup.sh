@@ -42,6 +42,7 @@ servicefile="/etc/systemd/system/$service"
 xinitfile='/home/pi/.xinitrc.d/early-obpplotterv3'
 xinitdir="`dirname \"$xinitfile\"`"
 xinituser='pi:pi'
+BOOT_FILES="initramfs.img splash.txt splash1.png"
 if [ "$1" = $MODE_EN ] ; then
   log "enable OBPPLOTTERV3"
   checkConfig "$BOOTCONFIG" "$PATTERN" "$CFGDATA"
@@ -61,7 +62,7 @@ if [ "$1" = $MODE_EN ] ; then
   
   # splash image handling
   # (1) copy initramfs and splash1 to /boot
-  for f in initramfs.img splash.txt splash1.png
+  for f in $BOOT_FILES
   do
     log "copy $f to /boot"
     cp "$pdir/splash/$f" /boot || errExit "unable to copy $f to boot"
@@ -96,11 +97,31 @@ if [ "$1" = $MODE_EN ] ; then
     log "activating plugins $P1 and $P2"
     "$ENSCRIPT" unhide "$P1" || errExit "unable to set config"
     "$ENSCRIPT" unhide "$P2" || errExit "unable to set config"
-    log "setting default parameters for $P2"
+    log "setting default parameters for $P1"
     "$ENSCRIPT" set "$P1" irqPin 13 || errExit "unable to set config"
     "$ENSCRIPT" set "$P1" i2cAddress 36 || errExit "unable to set config"  
     "$ENSCRIPT" set "$P1" ENTER z || errExit "unable to set config"  
   fi
+  uartScript="`dirname \"$AVNAV_SETUP_HELPER\"`/uart_control"
+  if [ -x "$uartScript" ] ; then
+    log "enable uart on GPIO"
+    "$uartScript" gpio
+  else
+    err "$uartScript not found, cannot enable uart"  
+  fi
+  patchScript="`dirname \"$AVNAV_SETUP_HELPER\"`/patchServerConfig.py"
+  config=/home/pi/avnav/data/avnav_server.xml
+  if [ -x "$patchScript" -a -e $config ] ; then
+    log "patching config file $config"
+    vb="-v"
+    "$patchScript" $vb -f $config -h AVNSerialReader -k port=/dev/ttyAMA0 baud=38400 minbaud=4800 name=gps
+    "$patchScript" $vb -f $config -h AVNBlueToothReader enabled=False
+    #not really necessary as the defaults are already set with plugin.sh
+    #but keep it here for a later chance to re-run if the user accidently changed things
+    "$patchScript" $vb -f $config -h AVNPluginHandler -c system-chremote irqPin=13 i2cAddress=36 ENTER=z
+  else
+    log "unable to patch server config $config"
+  fi    
   
 fi
 if [ "$1" != $MODE_DIS ] ; then
@@ -114,9 +135,13 @@ if [ "$1" = $MODE_DIS ] ; then
   log "disable OBPPLOTTERV3"
   removeConfig "$BOOTCONFIG" "$PATTERN"
   removeConfig /etc/modules "$PATTERN"
-  systemctl disable service=obpplotterv3.service
+  systemctl disable $service
   rm -f "$servicefile"
   rm -f "$xinitfile"
+  for bf in $BOOT_FILES
+  do
+    rm -f /boot/$bf
+  done
   if [ -x "$ENSCRIPT" ] ; then
     "$ENSCRIPT" hide "$P2"
   fi
