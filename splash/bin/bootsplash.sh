@@ -2,16 +2,6 @@
 echo "bootsplash started"
 num=100
 dev=/dev/fb0
-CFG=/boot/avnav.conf
-if [ ! -f $CFG ] ; then
-  echo "$CFG not found"
-  exit 0
-fi
-. $CFG
-if [ "$AVNAV_OBPPLOTTERV3" != yes ] ; then
-  echo "AVNAV_OBPPLOTTERV3 not set to yes"
-  exit 0
-fi
 while [ "$num" -gt 0 ] 
 do
   if [ -c $dev ] ; then
