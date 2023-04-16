@@ -111,16 +111,21 @@ if [ "$1" = $MODE_EN ] ; then
   fi
   patchScript="`dirname \"$AVNAV_SETUP_HELPER\"`/patchServerConfig.py"
   config=/home/pi/avnav/data/avnav_server.xml
-  if [ -x "$patchScript" -a -e $config ] ; then
-    log "patching config file $config"
-    vb="-v"
-    "$patchScript" $vb -f $config -h AVNSerialReader -k port=/dev/ttyAMA0 baud=38400 minbaud=4800 name=gps
-    "$patchScript" $vb -f $config -h AVNBlueToothReader enabled=False
-    #not really necessary as the defaults are already set with plugin.sh
-    #but keep it here for a later chance to re-run if the user accidently changed things
-    "$patchScript" $vb -f $config -h AVNPluginHandler -c system-chremote irqPin=13 i2cAddress=36 ENTER=z
-  else
-    log "unable to patch server config $config"
+  if [ -x "$patchScript" ] ; then
+    for cfg in $config /etc/avnav_server.xml
+    do
+      if [ -e $cfg ] ; then
+        log "patching config file $cfg"
+        vb="-v"
+        "$patchScript" $vb -f $cfg -h AVNSerialReader -k port=/dev/ttyAMA0 baud=38400 minbaud=4800 name=gps
+        "$patchScript" $vb -f $cfg -h AVNBlueToothReader enabled=False
+        #not really necessary as the defaults are already set with plugin.sh
+        #but keep it here for a later chance to re-run if the user accidently changed things
+        "$patchScript" $vb -f $cfg -h AVNPluginHandler -c system-chremote irqPin=13 i2cAddress=36 ENTER=z
+      else
+        log "unable to patch server config $config"
+      fi
+    done  
   fi    
   
 fi
