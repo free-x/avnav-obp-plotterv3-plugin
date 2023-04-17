@@ -20,7 +20,6 @@ dtoverlay=goodix,reset=4,interrupt=17
 dtoverlay=hifiberry-dac
 dtoverlay=i2s-mmap
 dtoverlay=gpio-shutdown,gpio_pin=22,active_low=1,gpio_pull=up
-initramfs initramfs.img
 disable_splash=1
 EOF
 
@@ -42,7 +41,6 @@ servicefile="/etc/systemd/system/$service"
 xinitfile='/home/pi/.xinitrc.d/early-obpplotterv3'
 xinitdir="`dirname \"$xinitfile\"`"
 xinituser='pi:pi'
-BOOT_FILES="initramfs.img splash.txt splash1.png"
 if [ "$1" = $MODE_EN ] ; then
   log "enable OBPPLOTTERV3"
   checkConfig "$BOOTCONFIG" "$PATTERN" "$CFGDATA"
@@ -61,12 +59,6 @@ if [ "$1" = $MODE_EN ] ; then
   checkRes
   
   # splash image handling
-  # (1) copy initramfs and splash1 to /boot
-  for f in $BOOT_FILES
-  do
-    log "copy $f to /boot"
-    cp "$pdir/splash/$f" /boot || errExit "unable to copy $f to boot"
-  done
   # (2) adapt cmdline.txt for fewer messages
   if grep -q logo.nologox /boot/cmdline.txt ; then
     log "/boot/cmdline OK"
@@ -143,10 +135,6 @@ if [ "$1" = $MODE_DIS ] ; then
   systemctl disable $service
   rm -f "$servicefile"
   rm -f "$xinitfile"
-  for bf in $BOOT_FILES
-  do
-    rm -f /boot/$bf
-  done
   if [ -x "$ENSCRIPT" ] ; then
     "$ENSCRIPT" hide "$P2"
   fi
@@ -156,7 +144,5 @@ else
 fi
 exit 0
 
-
-exit $ret
 
 
