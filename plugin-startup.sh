@@ -121,7 +121,7 @@ if [ "$1" = $MODE_EN ] ; then
   fi    
   
 fi
-if [ "$1" != $MODE_DIS ] ; then
+if [ "$1" != $MODE_DIS -a $needsReboot != 1 ] ; then
   POWEROFF="$pdir/enablePowerOff.sh"
   if [ -x "$POWEROFF" ] ; then
     log "enabling auto power off"
