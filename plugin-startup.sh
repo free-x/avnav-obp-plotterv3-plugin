@@ -32,12 +32,27 @@ xli -onroot -fillscreen -quiet /usr/lib/avnav/plugins/obp-plotterv3/splash/splas
 (sleep 20 ; xsetroot -bg black ) &
 XINITRC
 
+read -r -d '' PREVENTPO << 'PREVENTPO'
+[Unit]
+Description=prevent poweroff at reboot
+DefaultDependencies=no
+Before=reboot.target
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/avnav/plugins/obp-plotterv3/preventPowerOff.sh
+TimeoutStartSec=0
+[Install]
+WantedBy=reboot.target
+PREVENTPO
+
 needsReboot=0
 ENSCRIPT="$pdir/../../plugin.sh"
 P1="system-chremote"
 P2="system-`basename $pdir`"
 service=obpplotterv3.service
 servicefile="/etc/systemd/system/$service"
+poservice=opbpreventpo.service
+poservicefile="/etc/systemd/system/$poservice"
 xinitfile='/home/pi/.xinitrc.d/early-obpplotterv3'
 xinitdir="`dirname \"$xinitfile\"`"
 xinituser='pi:pi'
@@ -126,6 +141,11 @@ if [ "$1" != $MODE_DIS -a $needsReboot != 1 ] ; then
   if [ -x "$POWEROFF" ] ; then
     log "enabling auto power off"
     "$POWEROFF"
+    replaceConfig "$poservicefile" "$PREVENTPO"
+    if [ $? = 1 ] ; then
+      systemctl daemon-reload
+      systemctl enable "$poservice"
+    fi
   fi
 fi
 if [ "$1" = $MODE_DIS ] ; then
@@ -133,7 +153,9 @@ if [ "$1" = $MODE_DIS ] ; then
   removeConfig "$BOOTCONFIG" "$PATTERN"
   removeConfig /etc/modules "$PATTERN"
   systemctl disable $service
+  systemctl disable $poservice
   rm -f "$servicefile"
+  rm -f "$poservicefile"
   rm -f "$xinitfile"
   if [ -x "$ENSCRIPT" ] ; then
     "$ENSCRIPT" hide "$P2"
