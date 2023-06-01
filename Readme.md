@@ -9,5 +9,7 @@ It provides a set of [initial settings](localFirefox.json) for the local browser
 
 Releases
 --------
+  * [20230601](../../releases/tag/20230601):
+  add a dependency to prepare better error handling for the plotter 
   * [20230423](../../releases/tag/20230425): first release considered to be working for all the main functions.
 
