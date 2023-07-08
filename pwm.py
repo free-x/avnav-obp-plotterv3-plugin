@@ -18,7 +18,7 @@ class PWMControl:
   refer to /boot/overlay/README for allowed combinations of pin and func
   '''
   BASE_PATH="/sys/class/pwm/pwmchip0"
-  def __init__(self,frequency=100, dimmGpio=None) -> None:
+  def __init__(self,frequency=100, dimmFile=None) -> None:
     self.period=None
     self.duty=None
     self.freq=frequency
@@ -28,10 +28,7 @@ class PWMControl:
     self.dimm=False
     self.dimmWritten=False
     self.dimmFile=None
-    self.dimmGpio=None
-    if dimmGpio is not None:
-       self.dimmGpio=dimmGpio
-       gpio.setup(self.dimmGpio,gpio.IN)
+    self.dimmFile=dimmFile   
     
   def _setParam(self,duty,freq=None):
     if freq is not None:
@@ -49,13 +46,9 @@ class PWMControl:
         self.dimmWritten=False   
         h.write(str(duty))
   def _checkDim(self):
-    if self.dimmGpio is None:
-       return False
-    try:
-       return gpio.input(self.dimmGpio) == gpio.LOW
-    except Exception as e:
-       return False
-    
+    if self.dimmFile is not None:
+      return os.path.exists(self.dimmFile)
+    return False
                   
   def _write(self):
     self.dimm=self._checkDim()

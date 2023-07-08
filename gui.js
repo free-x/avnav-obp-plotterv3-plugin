@@ -40,7 +40,10 @@
     let currentBrightness;
     let currentVolume;
     let currentLuminance;
-    let adaptive;
+    let checkBoxes={
+        auto:undefined,
+        dimmHdmi:undefined
+    }
     const updateValues = async () => {
         let data = await sendApiRequest("query");
         if (data) {
@@ -56,7 +59,9 @@
             else{
                 currentLuminance.textContent = data.brightness;
             }
-            adaptive.checked=data.auto;
+            for (let cb in checkBoxes){
+                if (checkBoxes[cb]) checkBoxes[cb].checked=data[cb];
+            }
         }
     }
     window.addEventListener('load',()=>{
@@ -81,17 +86,19 @@
                 })
             }
         }
-        adaptive=document.getElementById('autoOn');
-        if (adaptive){
-            adaptive.addEventListener('change',async ()=>{
-                if (adaptive.checked){
-                    await sendApiRequest('autoOn');    
-                }
-                else{
-                    await sendApiRequest('autoOff');
-                }
-                await updateValues();
-            })
+        for (let cb in checkBoxes){
+            checkBoxes[cb]=document.getElementById(cb);
+            if (checkBoxes[cb]){
+                checkBoxes[cb].addEventListener('change',async ()=>{
+                    if (checkBoxes[cb].checked){
+                        await sendApiRequest(cb+"On");    
+                    }
+                    else{
+                        await sendApiRequest(cb+"Off");
+                    }
+                    await updateValues();
+                })
+            }
         }
     })
 })();

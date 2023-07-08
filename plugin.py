@@ -34,7 +34,7 @@ class GpioCfg:
     else:
       return self.bcm  
 
-DIMM_GPIO=GpioCfg(37,26) #if 1 we are in dimm mode and set duty time to 0
+DIMM_FILE='/tmp/obpdimm'
 START_BT=GpioCfg(15,22) #if detected low on startup we reset brightness
 
 
@@ -43,6 +43,7 @@ class Plugin(object):
   CFG_VOLUME='volume'
   CFG_MINLUM='minLuminance'
   CFG_MAXLUM='maxLuminance'
+  CFG_DIMMHDMI='dimmHdmi'
   CONFIG=[
     {
       'name':CFG_VOLUME,
@@ -68,6 +69,12 @@ class Plugin(object):
       'description':'the luminance value for 100% brightness',
       'default': 5000.0,
       'type':'FLOAT'
+    },
+    {
+      'name': CFG_DIMMHDMI,
+      'description':'also shut down the HDMI controller when dimming',
+      'default': True,
+      'type':'BOOLEAN'
     }
   ]
   @classmethod
@@ -114,28 +121,36 @@ class Plugin(object):
     self.currentStep=self.INITIAL_STEP
     dimmGpio=None
     self.startButton=None
+    self.gpioMode=None
     if gpio is not None:
       self.gpioMode=gpio.getmode()
       if self.gpioMode is None:
         gpio.setmode(gpio.BOARD)
         self.gpioMode=gpio.getmode()
-      dimmGpio=DIMM_GPIO.getPin(self.gpioMode)
       self.startButton=START_BT.getPin(self.gpioMode)
       gpio.setup(self.startButton,gpio.IN)
-    self.pwm=pwm.PWMControl(frequency,dimmGpio=dimmGpio)
+    self.pwm=pwm.PWMControl(frequency,dimmFile=DIMM_FILE)
     self.luminance=0
     self.lock=threading.Lock()
     self.error=None
     self.soundVolume=128
     self.luminanceError=None
     self.firstStart=True
-    
+
+
   def updateParam(self,newParam):
     self.api.saveConfigValues(newParam)
     if hasattr(self.api,'registerCommand'):
-      volume=self.api.getConfigValue('volume','128')
-      self.updateVolume(volume)
+      if self.CFG_VOLUME in newParam:
+        volume=self.api.getConfigValue(self.CFG_VOLUME,'128')
+        self.updateVolume(volume)
+      if self.CFG_DIMMHDMI in newParam:  
+        self.setDimmAction()
  
+  def setDimmAction(self):
+    dimmHdmi=self._getBool(self.CFG_DIMMHDMI,True)
+    param='hdmi' if dimmHdmi else 'backlight'
+    self.api.registerCommand('dimm','dimm.sh',client='local',parameters=[param])
   def updateVolume(self,newVolume):
     self.soundVolume=newVolume
     self.api.registerCommand('sound','sound.sh',parameters=[str(newVolume)])
@@ -219,10 +234,10 @@ class Plugin(object):
     return (data[1] + (256 * data[0]))
 
   def _adaptiveOn(self):
-    active=self.api.getConfigValue('adaptiveBrightness','False')
-    if not type(active) is bool:
-      active=str(active).lower() == 'true'
-    return active
+    return self._getBool(self.CFG_AUTO)
+  
+  def _getBool(self,name,default=False):
+    return str(self.api.getConfigValue(name,default)).lower() == 'true'
   
   def _getFloat(self,name,default):
     try:
@@ -271,12 +286,10 @@ class Plugin(object):
     @return:
     """
     seq=0
-    if not hasPackages:
-      raise Exception("missing packages for i2c")
     self.soundVolume=self.api.getConfigValue('volume',128)
     if hasattr(self.api,'registerCommand'):
-      self.api.registerCommand('sound','sound.sh',parameters=[str(self.soundVolume)])
-      self.api.registerCommand('dimm','dimm.sh',client='all')
+      self.updateVolume(self.soundVolume)
+      self.setDimmAction()
     else:
       self.error="unable to register dimm command, avnav too old"  
     self.api.registerRequestHandler(self.handleApiRequest)
@@ -287,8 +300,13 @@ class Plugin(object):
       self.api.setStatus('ERROR',self.error)
     else:  
       self.api.setStatus('NMEA','running')  
-    i2c = smbus.SMBus(1)
-    self.api.log("gpio mode=%d",self.gpioMode)
+    i2c=None
+    if not hasPackages:
+      self.luminanceError="missing packages for i2c"
+    else:  
+      i2c = smbus.SMBus(1)
+    if self.gpioMode is not None:  
+      self.api.log("gpio mode=%d",self.gpioMode)
     if self.firstStart:
       self.firstStart=False
       if self.startButton is not None:
@@ -311,7 +329,7 @@ class Plugin(object):
             self.update()
           except:
             pass
-        if address is not None:
+        if address is not None and i2c is not None:
           try:
             newBrightness=self.readBrightness(i2c,address)
             if self.luminanceError is not None or self.luminance is None:
@@ -365,7 +383,8 @@ class Plugin(object):
                 'volume':self.soundVolume,
                 'error':self.error,
                 'brightnessError': self.luminanceError,
-                'auto': self._adaptiveOn()
+                'auto': self._adaptiveOn(),
+                'dimmHdmi': self._getBool(self.CFG_DIMMHDMI,True)
                 }
       if url == 'plus':
         self.update(1)
@@ -384,15 +403,21 @@ class Plugin(object):
         self.changeVolume(-1)
         return OK
       if url == 'autoOn':
-        self.api.saveConfigValues({self.CFG_AUTO:True})
+        self.updateParam({self.CFG_AUTO:True})
         return OK
       if url == 'autoOff':
-        self.api.saveConfigValues({self.CFG_AUTO:False})
+        self.updateParam({self.CFG_AUTO:False})
+        return OK
+      if url == 'dimmHdmiOn':
+        self.updateParam({self.CFG_DIMMHDMI:True})
+        return OK
+      if url == 'dimmHdmiOff':
+        self.updateParam({self.CFG_DIMMHDMI:False})
         return OK
       if url == 'saveCurrent':
         with self.lock:
           #TODO: initial brightness
-          self.api.saveConfigValues({self.CFG_VOLUME:self.soundVolume})
+          self.updateParam({self.CFG_VOLUME:self.soundVolume})
           return {'status':'OK','saved':'volume=%s'%str(self.soundVolume)}  
     except Exception as e:
       return {'status':str(e)}    
