@@ -9,6 +9,9 @@ It provides a set of [initial settings](localFirefox.json) for the local browser
 
 Releases
 --------
+  * [20230711](../../releases/tag/20230711):
+  allow to keep the HDMI controller on when using dimm (swicth in plugin settings/UI)
+
   * [20230601](../../releases/tag/20230601):
   add a dependency to prepare better error handling for the plotter 
   * [20230423](../../releases/tag/20230425): first release considered to be working for all the main functions.
