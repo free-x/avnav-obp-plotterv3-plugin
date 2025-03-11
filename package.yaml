@@ -12,7 +12,6 @@ priority: "extra"
 depends:
 - avnav
 - python3-smbus
-- python3-rpi.gpio
 - python3-xlib
 - xli
 maintainer: "Andreas Vogel <andreas@wellenvogel.de>"
