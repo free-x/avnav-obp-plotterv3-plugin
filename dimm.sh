@@ -13,7 +13,26 @@ ctrl=$BASE/export
 dimmHdmi=0
 [ "$1" = hdmi ] && dimmHdmi=1
 shift
+PINCTRL=/usr/bin/pinctrl
+if [ -x $PINCTRL ] ; then
+  logger -t obpdim "dimm with pinctrl dimmHdmi=$dimmHdmi, mode=pinctrl, v=$1"
+  DIM_V=h
+  LED_V=l
+  if [ "$1" -eq 0 ] ; then
+    LED_V=h
+    if [ $dimmHdmi = 1 ] ; then
+      DIM_V=l
+    fi
+    touch "$DIMM_MARKER"
+  else
+    rm -f "$DIMM_MARKER"
+  fi
+  $PINCTRL set $GPIO_DIM op d$DIM_V
+  $PINCTRL set $GPIO_LED op d$LED_V
+  exit 0
+fi
 [ ! -w "$ctrl" ] && err "unable to write $ctrl"
+logger -t obpdim "dimm with pinctrl dimmHdmi=$dimmHdmi, mode=sysfs, v=$1"
 echo $GPIO_DIM > $ctrl 2> /dev/null
 echo $GPIO_LED > $ctrl 2> /dev/null
 wt=3
