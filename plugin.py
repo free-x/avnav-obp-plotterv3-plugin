@@ -127,8 +127,12 @@ class Plugin(object):
       if self.gpioMode is None:
         gpio.setmode(gpio.BOARD)
         self.gpioMode=gpio.getmode()
-      self.startButton=START_BT.getPin(self.gpioMode)
-      gpio.setup(self.startButton,gpio.IN)
+      try:
+        self.startButton=START_BT.getPin(self.gpioMode)
+        gpio.setup(self.startButton,gpio.IN)
+      except Exception as e:
+        self.startButton=None
+        self.api.error("unable to check for brightness reset: %s"%str(e))
     self.pwm=pwm.PWMControl(frequency,dimmFile=DIMM_FILE)
     self.luminance=0
     self.lock=threading.Lock()

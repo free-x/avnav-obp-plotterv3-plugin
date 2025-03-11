@@ -18,17 +18,20 @@ class PWMControl:
   refer to /boot/overlay/README for allowed combinations of pin and func
   '''
   BASE_PATH="/sys/class/pwm/pwmchip0"
+  #if we find a pwmchip2 (pi5) we must use this one
+  BASE_PATH5="/sys/class/pwm/pwmchip2"
   def __init__(self,frequency=100, dimmFile=None) -> None:
     self.period=None
     self.duty=None
     self.freq=frequency
-    self.pwm0=os.path.join(self.BASE_PATH,"pwm0")
+    self.pwm0=None
     self._setParam(50,frequency)
     self.prepared=False
     self.dimm=False
     self.dimmWritten=False
     self.dimmFile=None
-    self.dimmFile=dimmFile   
+    self.dimmFile=dimmFile
+    self.basePath=None   
     
   def _setParam(self,duty,freq=None):
     if freq is not None:
@@ -74,11 +77,17 @@ class PWMControl:
     frequency in Hz, duty in %
     will raise an exception if hardware is not accessible
     '''
-    if not os.path.exists(self.BASE_PATH):
-      raise Exception("pwm not created, missing %s"%self.BASE_PATH)
+    if self.basePath is None:
+      if os.path.exists(self.BASE_PATH5):
+          self.basePath=self.BASE_PATH5
+      else:
+        if not os.path.exists(self.BASE_PATH):
+          raise Exception("pwm not created, missing %s"%self.BASE_PATH)
+        self.basePath=self.BASE_PATH
+      self.pwm0=os.path.join(self.basePath,"pwm0")
     self.freq=freq  
     try:  
-        with open(os.path.join(self.BASE_PATH,"export"),"w") as h:
+        with open(os.path.join(self.basePath,"export"),"w") as h:
             h.write("0")
     except OSError as ose:
         if ose.errno == 16:
