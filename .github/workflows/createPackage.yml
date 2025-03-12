@@ -65,7 +65,7 @@ jobs:
           asset_content_type: application/octet-stream
 
       - name: Upload Repository
-        uses:  wellenvogel/sftp-upload-action@v1.0
+        uses:  wellenvogel/sftp-upload-action@v2.0
         env:
           PKG_DIR: ${{ steps.pkgyml.outputs.name }}
         with:
