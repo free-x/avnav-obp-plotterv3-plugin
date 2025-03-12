@@ -16,6 +16,7 @@ dtoverlay=pwm,pin=12,func=4
 dtparam=spi=on
 dtparam=i2c_arm=on
 dtoverlay=mcp2515-can0,oscillator=12000000,interrupt=25,spimaxfrequency=1000000
+gpio=17=pu
 dtoverlay=goodix,reset=4,interrupt=17
 dtoverlay=hifiberry-dac
 dtoverlay=i2s-mmap
