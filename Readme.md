@@ -9,8 +9,14 @@ It provides a set of [initial settings](localFirefox.json) for the local browser
 
 Releases
 --------
+  * [20250317](../../releases/tag/20250317):
+    * make it working on bookworm/Pi5
+    * pull up on GPIO17 to ensure proper i2c address for goodix
+    * use pinctrl (if available) instead of sysfs for GPIO access
+    * remove dependency to python3-rpi.gpio (requires separate installation of python3-rpi-lgpio)
+
   * [20230711](../../releases/tag/20230711):
-  allow to keep the HDMI controller on when using dimm (swicth in plugin settings/UI)
+  allow to keep the HDMI controller on when using dimm (switch in plugin settings/UI)
 
   * [20230601](../../releases/tag/20230601):
   add a dependency to prepare better error handling for the plotter 
